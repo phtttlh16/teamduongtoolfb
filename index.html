@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ Thống Phân Tích & Lọc Tương Tác Facebook</title>
+    <style>
+        :root {
+            --fb-blue: #1877f2;
+            --fb-bg: #f0f2f5;
+            --text-color: #1c1e21;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--fb-bg);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 700px;
+        }
+        h2 {
+            color: var(--fb-blue);
+            margin-top: 0;
+            text-align: center;
+        }
+        .guide-box {
+            background-color: #e7f3ff;
+            border-left: 5px solid var(--fb-blue);
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            font-weight: bold;
+            display: block;
+            margin-bottom: 8px;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ccd0d5;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 1rem;
+        }
+        textarea {
+            width: 100%;
+            height: 150px;
+            padding: 12px;
+            border: 1px solid #ccd0d5;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-family: monospace;
+            font-size: 0.9rem;
+            resize: vertical;
+        }
+        .btn {
+            background-color: var(--fb-blue);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 1rem;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            width: 100%;
+            transition: background 0.2s;
+        }
+        .btn:hover {
+            background-color: #166fe5;
+        }
+        .result-section {
+            margin-top: 25px;
+            border-top: 2px solid #e4e6eb;
+            padding-top: 20px;
+        }
+        .result-title {
+            font-size: 1.1rem;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+        .user-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .user-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            background: #f8f9fa;
+            margin-bottom: 8px;
+            border-radius: 6px;
+            border: 1px solid #e4e6eb;
+        }
+        .user-link {
+            color: var(--fb-blue);
+            text-decoration: none;
+            font-weight: 500;
+            word-break: break-all;
+        }
+        .user-link:hover {
+            text-decoration: underline;
+        }
+        .badge {
+            background: #e4e6eb;
+            padding: 4px 8px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+        .badge.high {
+            background: #28a745;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>📊 HỆ THỐNG LỌC TƯƠNG TÁC FACEBOOK</h2>
+    
+    <div class="guide-box">
+        <strong>💡 Hướng dẫn sử dụng để Web hoạt động công khai:</strong><br>
+        1. Nhập Link Facebook của mục tiêu cần quét vào Ô số 1.<br>
+        2. Dán khối dữ liệu tương tác thô đã thu thập được vào Ô số 2.<br>
+        3. Bấm nút Hệ thống sẽ tự động lọc ra các "Fan cứng" tương tác nhiều nhất dưới dạng Link bấm được.
+    </div>
+
+    <div class="form-group">
+        <label>1. Nhập Link Facebook User mục tiêu:</label>
+        <input type="text" id="targetLink" placeholder="Ví dụ: https://facebook.com">
+    </div>
+
+    <div class="form-group">
+        <label>2. Dán dữ liệu lịch sử tương tác thu thập được:</label>
+        <textarea id="rawData" placeholder="Dán danh sách UID hoặc link những người từng Like/Comment bài viết tại đây..."></textarea>
+    </div>
+
+    <button class="btn" onclick="analystData()">Bắt Đầu Phân Tích & Lọc Link</button>
+
+    <div class="result-section" id="resultSection" style="display: none;">
+        <div class="result-title" id="countSummary">Kết quả phân tích:</div>
+        <ul class="user-list" id="outputList"></ul>
+    </div>
+</div>
+
+<script>
+function analystData() {
+    const rawData = document.getElementById('rawData').value;
+    const targetLink = document.getElementById('targetLink').value;
+    
+    if(!rawData.trim()) {
+        alert("Vui lòng nhập dữ liệu tương tác ở ô số 2!");
+        return;
+    }
+
+    // Tách dữ liệu theo từng dòng
+    const lines = rawData.split('\n').map(line => line.trim()).filter(line => line !== "");
+    
+    // Đếm tần suất tương tác
+    const userCounts = {};
+    lines.forEach(user => {
+        userCounts[user] = (userCounts[user] || 0) + 1;
+    });
+
+    const outputList = document.getElementById('outputList');
+    outputList.innerHTML = ""; // Xóa dữ liệu cũ
+    
+    let fitleredCount = 0;
+
+    // Sắp xếp theo số lần tương tác giảm dần
+    const sortedUsers = Object.entries(userCounts).sort((a, b) => b[1] - a[1]);
+
+    sortedUsers.forEach(([user, count]) => {
+        // Lọc những người tương tác từ 3 lần trở lên
+        if (count >= 3) {
+            fitleredCount++;
+            const li = document.createElement('li');
+            li.className = 'user-item';
+
+            // Tạo link Facebook hoàn chỉnh nếu dữ liệu là UID hoặc username
+            let finalLink = user;
+            if(!user.startsWith('http')) {
+                finalLink = `https://facebook.com{user}`;
+            }
+
+            li.innerHTML = `
+                <a href="${finalLink}" target="_blank" class="user-link">🔗 ${user}</a>
+                <span class="badge ${count >= 5 ? 'high' : ''}">Tương tác: ${count} lần</span>
+            `;
+            outputList.appendChild(li);
+        }
+    });
+
+    // Hiển thị khung kết quả
+    document.getElementById('resultSection').style.display = 'block';
+    const summary = document.getElementById('countSummary');
+    if(fitleredCount > 0) {
+        summary.innerHTML = `✅ Tìm thấy <strong>${fitleredCount}</strong> người tương tác thân thiết (từ 3 lần trở lên):`;
+    } else {
+        summary.innerHTML = `❌ Không tìm thấy ai tương tác trên 3 lần trong danh sách dữ liệu này.`;
+    }
+}
+</script>
+
+</body>
+</html>
